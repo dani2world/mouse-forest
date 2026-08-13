@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>마우스로 대모험</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="mute-btn" class="mute-btn" title="소리 켜기/끄기">🔊</button>
+<div id="app">
+
+  <!-- ============ 스테이지 맵 화면 ============ -->
+  <section id="screen-map" class="screen">
+    <div class="map-card">
+      <h1 class="title">🖱️ 마우스로 대모험</h1>
+      <p class="subtitle">미니게임을 하나씩 깨면서 마우스 실력을 키워보자!</p>
+      <div class="stage-grid" id="stage-grid">
+        <button class="stage-tile" data-stage="1">
+          <span class="stage-icon" id="stage-icon-1"></span>
+          <span class="stage-name">두더지 잡기</span>
+          <span class="stage-best" id="best-1">최고점수 : -</span>
+        </button>
+        <button class="stage-tile locked" data-stage="2" disabled>
+          <span class="stage-icon" id="stage-icon-2">🔒</span>
+          <span class="stage-name">도토리 모으기</span>
+          <span class="stage-best" id="best-2">준비중</span>
+        </button>
+        <button class="stage-tile locked" data-stage="3" disabled>
+          <span class="stage-icon" id="stage-icon-3">🔒</span>
+          <span class="stage-name">엄마토끼 찾기</span>
+          <span class="stage-best" id="best-3">준비중</span>
+        </button>
+        <button class="stage-tile locked" data-stage="4" disabled>
+          <span class="stage-icon" id="stage-icon-4">🔒</span>
+          <span class="stage-name">선물 열어보기</span>
+          <span class="stage-best" id="best-4">준비중</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 두더지 잡기 게임 화면 ============ -->
+  <section id="screen-mole" class="screen hidden">
+    <div class="hud">
+      <div class="hud-item">⏱ <span id="mole-time">30</span>초</div>
+      <div class="hud-item">⭐ <span id="mole-score">0</span>점</div>
+      <button id="mole-quit-btn" class="quit-btn">✕ 그만하기</button>
+    </div>
+    <div class="mole-board" id="mole-board"></div>
+    <div id="mole-start-overlay" class="overlay-panel">
+      <h2>🐹 두더지 잡기</h2>
+      <p>튀어나오는 두더지를 마우스로 빠르게 클릭하세요!</p>
+      <button id="mole-start-btn" class="start-btn">▶ 시작하기</button>
+    </div>
+  </section>
+
+  <!-- ============ 도토리 모으기 게임 화면 ============ -->
+  <section id="screen-drag" class="screen hidden">
+    <div class="hud">
+      <div class="hud-item">⏱ <span id="drag-time">30</span>초</div>
+      <div class="hud-item">⭐ <span id="drag-score">0</span>점</div>
+      <button id="drag-quit-btn" class="quit-btn">✕ 그만하기</button>
+    </div>
+    <div class="drag-field" id="drag-field">
+      <div class="tree-leaves">
+        <svg viewBox="0 0 400 90" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="55" cy="30" rx="70" ry="50" fill="#7ab648" stroke="#2b2b3d" stroke-width="7"/>
+          <ellipse cx="175" cy="12" rx="80" ry="55" fill="#8bc34a" stroke="#2b2b3d" stroke-width="7"/>
+          <ellipse cx="300" cy="28" rx="78" ry="52" fill="#7ab648" stroke="#2b2b3d" stroke-width="7"/>
+          <ellipse cx="385" cy="18" rx="55" ry="45" fill="#8bc34a" stroke="#2b2b3d" stroke-width="7"/>
+        </svg>
+      </div>
+      <div class="basket" id="basket">
+        <div class="basket-fill-mask">
+          <div class="basket-fill-bar" id="basket-fill-bar"></div>
+        </div>
+        <div class="basket-svg" id="basket-svg"></div>
+      </div>
+    </div>
+    <div id="drag-start-overlay" class="overlay-panel">
+      <h2>🌰 도토리 모으기</h2>
+      <p>도토리를 마우스로 끌어서 바구니에 담아주세요!</p>
+      <button id="drag-start-btn" class="start-btn">▶ 시작하기</button>
+    </div>
+  </section>
+
+  <!-- ============ 엄마토끼 찾기 게임 화면 ============ -->
+  <section id="screen-maze" class="screen hidden">
+    <div class="hud">
+      <div class="hud-item">⏱ <span id="maze-time">30</span>초</div>
+      <div class="hud-item">⭐ <span id="maze-score">0</span>점</div>
+      <button id="maze-quit-btn" class="quit-btn">✕ 그만하기</button>
+    </div>
+    <div class="maze-field" id="maze-field"></div>
+    <div id="maze-start-overlay" class="overlay-panel">
+      <h2>🐰 엄마토끼 찾기</h2>
+      <p>옹달샘에서 출발해 수풀에 닿지 않게 엄마토끼한테 가보세요!</p>
+      <button id="maze-start-btn" class="start-btn">▶ 시작하기</button>
+    </div>
+  </section>
+
+  <!-- ============ 선물 열어보기 게임 화면 ============ -->
+  <section id="screen-box" class="screen hidden">
+    <div class="hud">
+      <div class="hud-item">⏱ <span id="box-time">30</span>초</div>
+      <div class="hud-item">⭐ <span id="box-score">0</span>점</div>
+      <button id="box-quit-btn" class="quit-btn">✕ 그만하기</button>
+    </div>
+    <div class="box-field" id="box-field"></div>
+    <div id="box-start-overlay" class="overlay-panel">
+      <h2>🎁 선물 열어보기</h2>
+      <p>반짝이는 선물상자를 찾아 빠르게 두 번 클릭! 리본이 풀리고 뚜껑이 열려요.</p>
+      <button id="box-start-btn" class="start-btn">▶ 시작하기</button>
+    </div>
+  </section>
+
+  <!-- ============ 결과 화면 ============ -->
+  <section id="screen-result" class="screen hidden">
+    <div class="map-card">
+      <h1 class="title">🎉 결과 발표</h1>
+      <p class="result-score" id="result-score">0점</p>
+      <p class="result-best" id="result-best">최고점수 : 0점</p>
+      <button id="retry-btn" class="start-btn">🔄 다시하기</button>
+      <button id="back-map-btn" class="link-btn">스테이지 맵으로</button>
+    </div>
+  </section>
+
+</div>
+<script src="audio.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
