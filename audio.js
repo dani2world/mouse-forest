@@ -87,6 +87,11 @@ window.GameAudio = (function () {
     playMiss: function () {
       tone(180, 0, 0.16, 'sawtooth', 0.15);
     },
+    playBonus: function () {
+      tone(659.25, 0, 0.1, 'triangle', 0.2);
+      tone(880, 0.1, 0.1, 'triangle', 0.2);
+      tone(1046.5, 0.2, 0.2, 'triangle', 0.22);
+    },
     playStart: function () {
       tone(523.25, 0, 0.1, 'triangle', 0.2);
       tone(783.99, 0.1, 0.16, 'triangle', 0.2);

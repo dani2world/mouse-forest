@@ -22,6 +22,15 @@ const ACORN_SVG = `
   <line x1="25" y1="30" x2="75" y2="30" stroke="#2b2b3d" stroke-width="3" stroke-linecap="round"/>
 </svg>`;
 
+const PINECONE_SVG = `
+<svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
+  <path d="M50 8 C32 8 22 26 22 52 C22 78 34 102 50 102 C66 102 78 78 78 52 C78 26 68 8 50 8 Z" fill="#8a5a34" stroke="#2b2b3d" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M28 28 Q50 36 72 28" fill="none" stroke="#2b2b3d" stroke-width="3" stroke-linecap="round"/>
+  <path d="M25 46 Q50 56 75 46" fill="none" stroke="#2b2b3d" stroke-width="3" stroke-linecap="round"/>
+  <path d="M25 64 Q50 74 75 64" fill="none" stroke="#2b2b3d" stroke-width="3" stroke-linecap="round"/>
+  <path d="M29 82 Q50 90 71 82" fill="none" stroke="#2b2b3d" stroke-width="3" stroke-linecap="round"/>
+</svg>`;
+
 const BASKET_SVG = `
 <svg viewBox="0 0 140 100" xmlns="http://www.w3.org/2000/svg">
   <path d="M22 42 L118 42 L106 94 L34 94 Z" fill="#c9a06a" stroke="#2b2b3d" stroke-width="7" stroke-linejoin="round"/>
@@ -104,10 +113,15 @@ const TOY_DIAMOND_SVG = `
 `;
 
 const TOY_SVGS = [TOY_BEAR_SVG, TOY_FLOWER_SVG, TOY_ROBOT_SVG, TOY_CAR_SVG, TOY_DIAMOND_SVG];
+const TOY_NAMES = ['곰인형', '꽃', '로봇', '자동차', '다이아몬드'];
 
-function getGiftBoxOpenSVG() {
-  const toy = TOY_SVGS[Math.floor(Math.random() * TOY_SVGS.length)];
+function buildToySVG(toy) {
   return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${GIFT_BOX_OPEN_BASE_SVG}${toy}</svg>`;
+}
+
+function getRandomToy() {
+  const typeIndex = Math.floor(Math.random() * TOY_SVGS.length);
+  return { typeIndex, svg: buildToySVG(TOY_SVGS[typeIndex]) };
 }
 
 const MAZE_ICON_SVG = `
@@ -128,6 +142,8 @@ const BUNNY_CURSOR_SVG =
   '<circle cx="12.5" cy="23" r="1.6" fill="#2b2b3d"/>' +
   '<circle cx="19.5" cy="23" r="1.6" fill="#2b2b3d"/>' +
   '<circle cx="16" cy="27" r="1.6" fill="#ff9eb0"/>' +
+  '<circle cx="10" cy="26.5" r="1.7" fill="#ffb3c1"/>' +
+  '<circle cx="22" cy="26.5" r="1.7" fill="#ffb3c1"/>' +
   '</svg>';
 
 const SPRING_SVG = `
@@ -144,6 +160,8 @@ const MOTHER_RABBIT_SVG = `
   <ellipse cx="36" cy="34" rx="5" ry="16" fill="#ffb3c1"/>
   <ellipse cx="64" cy="34" rx="5" ry="16" fill="#ffb3c1"/>
   <circle cx="50" cy="72" r="30" fill="#fdf6ec" stroke="#2b2b3d" stroke-width="6"/>
+  <path d="M50 30 L39 22 L39 38 Z" fill="#ff6f91" stroke="#2b2b3d" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M50 30 L61 22 L61 38 Z" fill="#ff6f91" stroke="#2b2b3d" stroke-width="4" stroke-linejoin="round"/>
   <circle cx="40" cy="68" r="4.5" fill="#2b2b3d"/>
   <circle cx="60" cy="68" r="4.5" fill="#2b2b3d"/>
   <circle cx="50" cy="78" r="4.5" fill="#ff9eb0"/>
@@ -156,11 +174,15 @@ const BEST_SCORE_KEY_1 = 'mouseAdventure_best_1';
 const BEST_SCORE_KEY_2 = 'mouseAdventure_best_2';
 const BEST_SCORE_KEY_3 = 'mouseAdventure_best_3';
 const BEST_SCORE_KEY_4 = 'mouseAdventure_best_4';
+const MOLE_UNLOCK_SCORE = 10; // 이 점수 이상이어야 도토리 모으기가 열림
+const DRAG_UNLOCK_SCORE = 10; // 이 점수 이상이어야 엄마토끼 찾기가 열림
+const MAZE_UNLOCK_SCORE = 6; // 이 점수 이상이어야 선물 열어보기가 열림
 const HOLE_COUNT = 9;
 const GAME_DURATION = 30; // 초
 const MIN_UP_TIME = 550; // ms, 두더지가 떠 있는 최소 시간
 const MAX_UP_TIME = 1000; // ms, 두더지가 떠 있는 최대 시간
-const SPAWN_INTERVAL = 700; // ms, 새 두더지 등장 주기
+const SPAWN_INTERVAL_START = 1400; // ms, 게임 시작 시 두더지 등장 주기(느림)
+const SPAWN_INTERVAL_END = 400; // ms, 게임 막판 두더지 등장 주기(빠름)
 const DRAG_GAME_DURATION = 30; // 초
 
 const screens = {
@@ -225,6 +247,10 @@ function renderMap() {
     const best4 = getBestScore(BEST_SCORE_KEY_4);
     document.getElementById('best-4').textContent = best4 > 0 ? `최고점수 : ${best4}점` : '최고점수 : -';
   }
+
+  const totalScore = getBestScore(BEST_SCORE_KEY_1) + getBestScore(BEST_SCORE_KEY_2)
+    + getBestScore(BEST_SCORE_KEY_3) + getBestScore(BEST_SCORE_KEY_4);
+  document.getElementById('total-score').textContent = `총점 : ${totalScore}점`;
 }
 
 // ===== 오디오 =====
@@ -337,7 +363,7 @@ function startMoleGame() {
   unlockAudioAndStartBgm();
   GameAudio.playStart();
 
-  spawnTimer = setInterval(spawnMole, SPAWN_INTERVAL);
+  scheduleNextMole();
   countdownTimer = setInterval(() => {
     timeLeft -= 1;
     moleTimeEl.textContent = String(timeLeft);
@@ -345,6 +371,14 @@ function startMoleGame() {
       endMoleGame();
     }
   }, 1000);
+}
+
+function scheduleNextMole() {
+  if (!isPlaying) return;
+  spawnMole();
+  const progress = Math.min((GAME_DURATION - timeLeft) / GAME_DURATION, 1);
+  const interval = SPAWN_INTERVAL_START + (SPAWN_INTERVAL_END - SPAWN_INTERVAL_START) * progress;
+  spawnTimer = setTimeout(scheduleNextMole, interval);
 }
 
 function spawnMole() {
@@ -401,7 +435,7 @@ function spawnHitEffect(hole) {
 
 function stopMoleGame() {
   isPlaying = false;
-  clearInterval(spawnTimer);
+  clearTimeout(spawnTimer);
   clearInterval(countdownTimer);
   holeTimers.forEach((t) => t && clearTimeout(t));
   holeTimers = new Array(HOLE_COUNT).fill(null);
@@ -410,13 +444,21 @@ function stopMoleGame() {
 function endMoleGame() {
   stopMoleGame();
   GameAudio.playGameOver();
-  unlockStage(2);
   const best = getBestScore(BEST_SCORE_KEY_1);
   const isNewBest = score > best;
   if (isNewBest) {
     localStorage.setItem(BEST_SCORE_KEY_1, String(score));
   }
-  showResult(score, isNewBest ? score : best);
+
+  const alreadyUnlocked = getUnlockedStage() >= 2;
+  let unlockHint = null;
+  if (score >= MOLE_UNLOCK_SCORE) {
+    if (!alreadyUnlocked) unlockHint = `🎉 ${MOLE_UNLOCK_SCORE}점 이상 달성! 다음 스테이지가 열렸어요`;
+    unlockStage(2);
+  } else if (!alreadyUnlocked) {
+    unlockHint = `다음 스테이지를 열려면 ${MOLE_UNLOCK_SCORE}점 이상 필요해요 (이번 점수 ${score}점)`;
+  }
+  showResult(score, isNewBest ? score : best, unlockHint);
 }
 
 // ===== 도토리 모으기 =====
@@ -431,7 +473,12 @@ const basketFillBar = document.getElementById('basket-fill-bar');
 
 const ACORN_SIZE = 58;
 const LEAVES_HEIGHT = 60; // 나뭇잎 아래에서 도토리가 떨어지기 시작하는 위치
-const FALL_SPEED = 40; // px/초, 도토리가 떨어지는 속도
+const FALL_SPEED_START = 55; // px/초, 게임 시작 시 낙하 속도(느림)
+const FALL_SPEED_END = 150; // px/초, 게임 막판 낙하 속도(빠름)
+const SPAWN_GAP_START = 1300; // ms, 게임 시작 시 등장 간격(뜸함)
+const SPAWN_GAP_END = 550; // ms, 게임 막판 등장 간격(자주, 여러 개가 동시에 떨어짐)
+const MAX_FALLING_ITEMS = 4; // 동시에 떨어질 수 있는 최대 개수
+const PINECONE_CHANCE = 0.22; // 솔방울이 섞여 나올 확률
 const FILL_MAX_SCORE = 36; // 이 점수에 도달하면 바구니가 가득 참
 
 let dragTimeLeft = DRAG_GAME_DURATION;
@@ -439,7 +486,7 @@ let dragScore = 0;
 let isDragPlaying = false;
 let dragSpawnTimer = null;
 let dragCountdownTimer = null;
-let currentAcorn = null;
+let fallingItems = []; // 현재 떨어지고 있는 도토리/솔방울 엘리먼트 목록
 let dragState = null;
 
 document.getElementById('basket-svg').innerHTML = BASKET_SVG;
@@ -451,7 +498,7 @@ function updateBasketFill() {
 
 function openDragGame() {
   dragField.querySelectorAll('.acorn').forEach((el) => el.remove());
-  currentAcorn = null;
+  fallingItems = [];
   dragStartOverlay.classList.remove('hidden');
   resetDragHud();
   showScreen('drag');
@@ -480,7 +527,7 @@ function startDragGame() {
   isDragPlaying = true;
   unlockAudioAndStartBgm();
   GameAudio.playStart();
-  spawnAcorn();
+  scheduleNextAcornSpawn();
 
   dragCountdownTimer = setInterval(() => {
     dragTimeLeft -= 1;
@@ -491,74 +538,88 @@ function startDragGame() {
   }, 1000);
 }
 
-function spawnAcorn() {
-  if (currentAcorn) {
-    stopFalling(currentAcorn);
-    currentAcorn.remove();
+function scheduleNextAcornSpawn() {
+  if (!isDragPlaying) return;
+  if (fallingItems.length < MAX_FALLING_ITEMS) {
+    spawnFallingItem();
   }
-  const acorn = document.createElement('div');
-  acorn.className = 'acorn';
-  acorn.innerHTML = ACORN_SVG;
+  const progress = Math.min((DRAG_GAME_DURATION - dragTimeLeft) / DRAG_GAME_DURATION, 1);
+  const gap = SPAWN_GAP_START + (SPAWN_GAP_END - SPAWN_GAP_START) * progress;
+  dragSpawnTimer = setTimeout(scheduleNextAcornSpawn, gap);
+}
+
+function spawnFallingItem() {
+  const isPinecone = Math.random() < PINECONE_CHANCE;
+  const item = document.createElement('div');
+  item.className = 'acorn';
+  item.dataset.itemType = isPinecone ? 'pinecone' : 'acorn';
+  item.innerHTML = isPinecone ? PINECONE_SVG : ACORN_SVG;
 
   const fieldW = dragField.clientWidth;
   const maxX = Math.max(0, fieldW - ACORN_SIZE);
   const x = Math.random() * maxX;
-  acorn.style.left = `${x}px`;
-  acorn.style.top = `${LEAVES_HEIGHT}px`;
+  item.style.left = `${x}px`;
+  item.style.top = `${LEAVES_HEIGHT}px`;
 
-  acorn.addEventListener('pointerdown', onAcornPointerDown);
-  dragField.appendChild(acorn);
-  currentAcorn = acorn;
-  startFalling(acorn);
+  item.addEventListener('pointerdown', onAcornPointerDown);
+  dragField.appendChild(item);
+  fallingItems.push(item);
+  startFalling(item);
 }
 
-function startFalling(acorn) {
-  acorn.dataset.falling = '1';
+function startFalling(item) {
+  item.dataset.falling = '1';
   let lastTime = performance.now();
 
   function tick(now) {
-    if (acorn.dataset.falling !== '1' || !isDragPlaying) return;
+    if (item.dataset.falling !== '1' || !isDragPlaying) return;
     const dt = (now - lastTime) / 1000;
     lastTime = now;
     const maxTop = dragField.clientHeight - ACORN_SIZE;
-    const nextTop = parseFloat(acorn.style.top) + FALL_SPEED * dt;
+    const progress = Math.min((DRAG_GAME_DURATION - dragTimeLeft) / DRAG_GAME_DURATION, 1);
+    const fallSpeed = FALL_SPEED_START + (FALL_SPEED_END - FALL_SPEED_START) * progress;
+    const nextTop = parseFloat(item.style.top) + fallSpeed * dt;
 
     if (nextTop >= maxTop) {
-      acorn.dataset.falling = '0';
-      acorn.remove();
-      if (acorn === currentAcorn) spawnAcorn();
+      removeFallingItem(item);
       return;
     }
-    acorn.style.top = `${nextTop}px`;
-    acorn._fallRaf = requestAnimationFrame(tick);
+    item.style.top = `${nextTop}px`;
+    item._fallRaf = requestAnimationFrame(tick);
   }
 
-  acorn._fallRaf = requestAnimationFrame(tick);
+  item._fallRaf = requestAnimationFrame(tick);
 }
 
-function stopFalling(acorn) {
-  acorn.dataset.falling = '0';
-  if (acorn._fallRaf) {
-    cancelAnimationFrame(acorn._fallRaf);
-    acorn._fallRaf = null;
+function stopFalling(item) {
+  item.dataset.falling = '0';
+  if (item._fallRaf) {
+    cancelAnimationFrame(item._fallRaf);
+    item._fallRaf = null;
   }
+}
+
+function removeFallingItem(item) {
+  stopFalling(item);
+  item.remove();
+  fallingItems = fallingItems.filter((el) => el !== item);
 }
 
 function onAcornPointerDown(e) {
   if (!isDragPlaying) return;
-  const acorn = e.currentTarget;
-  stopFalling(acorn);
-  acorn.setPointerCapture(e.pointerId);
-  const rect = acorn.getBoundingClientRect();
+  const item = e.currentTarget;
+  stopFalling(item);
+  item.setPointerCapture(e.pointerId);
+  const rect = item.getBoundingClientRect();
   dragState = {
-    el: acorn,
+    el: item,
     pointerId: e.pointerId,
     offsetX: e.clientX - rect.left,
     offsetY: e.clientY - rect.top,
   };
-  acorn.classList.add('dragging');
-  acorn.addEventListener('pointermove', onAcornPointerMove);
-  acorn.addEventListener('pointerup', onAcornPointerUp);
+  item.classList.add('dragging');
+  item.addEventListener('pointermove', onAcornPointerMove);
+  item.addEventListener('pointerup', onAcornPointerUp);
 }
 
 function onAcornPointerMove(e) {
@@ -574,61 +635,83 @@ function onAcornPointerMove(e) {
 
 function onAcornPointerUp(e) {
   if (!dragState || e.pointerId !== dragState.pointerId) return;
-  const acorn = dragState.el;
-  acorn.classList.remove('dragging');
-  acorn.removeEventListener('pointermove', onAcornPointerMove);
-  acorn.removeEventListener('pointerup', onAcornPointerUp);
+  const item = dragState.el;
+  item.classList.remove('dragging');
+  item.removeEventListener('pointermove', onAcornPointerMove);
+  item.removeEventListener('pointerup', onAcornPointerUp);
 
-  const acornRect = acorn.getBoundingClientRect();
+  const itemRect = item.getBoundingClientRect();
   const basketRect = basket.getBoundingClientRect();
-  const cx = acornRect.left + acornRect.width / 2;
-  const cy = acornRect.top + acornRect.height / 2;
+  const cx = itemRect.left + itemRect.width / 2;
+  const cy = itemRect.top + itemRect.height / 2;
   const overlaps = cx > basketRect.left && cx < basketRect.right && cy > basketRect.top && cy < basketRect.bottom;
 
   if (overlaps && isDragPlaying) {
-    dragScore += 1;
+    const isPinecone = item.dataset.itemType === 'pinecone';
+    if (isPinecone) {
+      dragScore = Math.max(0, dragScore - 1);
+      GameAudio.playMiss();
+      spawnDropEffect(true);
+    } else {
+      dragScore += 1;
+      GameAudio.playHit();
+      spawnDropEffect(false);
+    }
     dragScoreEl.textContent = String(dragScore);
     updateBasketFill();
-    GameAudio.playHit();
-    spawnDropEffect();
-    spawnAcorn();
+    removeFallingItem(item);
   } else if (isDragPlaying) {
-    startFalling(acorn);
+    startFalling(item);
   }
   dragState = null;
 }
 
-function spawnDropEffect() {
+function spawnDropEffect(isPenalty) {
   const burst = document.createElement('div');
   burst.className = 'basket-burst';
-  burst.textContent = '✨';
+  burst.textContent = isPenalty ? '💢' : '✨';
   dragField.appendChild(burst);
   setTimeout(() => burst.remove(), 500);
+
+  const pop = document.createElement('div');
+  pop.className = isPenalty ? 'score-pop penalty' : 'score-pop';
+  pop.textContent = isPenalty ? '-1' : '+1';
+  pop.style.left = '50%';
+  pop.style.top = '72%';
+  dragField.appendChild(pop);
+  setTimeout(() => pop.remove(), 650);
 }
 
 function stopDragGame() {
   isDragPlaying = false;
   clearInterval(dragCountdownTimer);
+  clearTimeout(dragSpawnTimer);
   if (dragState) {
     dragState.el.removeEventListener('pointermove', onAcornPointerMove);
     dragState.el.removeEventListener('pointerup', onAcornPointerUp);
     dragState = null;
   }
-  if (currentAcorn) {
-    stopFalling(currentAcorn);
-  }
+  fallingItems.forEach((item) => stopFalling(item));
 }
 
 function endDragGame() {
   stopDragGame();
   GameAudio.playGameOver();
-  unlockStage(3);
   const best = getBestScore(BEST_SCORE_KEY_2);
   const isNewBest = dragScore > best;
   if (isNewBest) {
     localStorage.setItem(BEST_SCORE_KEY_2, String(dragScore));
   }
-  showResult(dragScore, isNewBest ? dragScore : best);
+
+  const alreadyUnlocked = getUnlockedStage() >= 3;
+  let unlockHint = null;
+  if (dragScore >= DRAG_UNLOCK_SCORE) {
+    if (!alreadyUnlocked) unlockHint = `🎉 ${DRAG_UNLOCK_SCORE}점 이상 달성! 다음 스테이지가 열렸어요`;
+    unlockStage(3);
+  } else if (!alreadyUnlocked) {
+    unlockHint = `다음 스테이지를 열려면 ${DRAG_UNLOCK_SCORE}점 이상 필요해요 (이번 점수 ${dragScore}점)`;
+  }
+  showResult(dragScore, isNewBest ? dragScore : best, unlockHint);
 }
 
 // ===== 엄마 찾기 =====
@@ -641,7 +724,7 @@ const mazeQuitBtn = document.getElementById('maze-quit-btn');
 
 const MAZE_ROWS = 6;
 const MAZE_COLS = 9;
-const MAZE_DURATION = 30; // 초
+const MAZE_DURATION = 50; // 초
 
 // 1 = 통로, 0 = 벽. 레벨이 올라갈수록 길이 더 길고 꼬여있음
 const MAZE_LEVELS = [
@@ -705,9 +788,34 @@ const MAZE_LEVELS = [
       [1, 1, 1, 0, 1, 1, 1, 0, 1],
     ],
   },
+  {
+    start: { row: 0, col: 0 },
+    goal: { row: 0, col: 8 },
+    grid: [
+      [1, 1, 1, 0, 1, 1, 1, 0, 1],
+      [0, 0, 1, 0, 1, 0, 1, 0, 1],
+      [0, 0, 1, 0, 1, 0, 1, 0, 1],
+      [0, 0, 1, 0, 1, 0, 1, 0, 1],
+      [0, 0, 1, 0, 1, 0, 1, 0, 1],
+      [0, 0, 1, 1, 1, 0, 1, 1, 1],
+    ],
+  },
+  {
+    start: { row: 0, col: 0 },
+    goal: { row: 0, col: 8 },
+    grid: [
+      [1, 0, 0, 0, 0, 0, 0, 0, 1],
+      [1, 0, 1, 1, 1, 0, 1, 1, 1],
+      [1, 0, 1, 0, 1, 0, 1, 0, 0],
+      [1, 0, 1, 0, 1, 0, 1, 0, 0],
+      [1, 0, 1, 0, 1, 0, 1, 0, 0],
+      [1, 1, 1, 0, 1, 1, 1, 0, 0],
+    ],
+  },
 ];
 
 let mazeCells = [];
+let mazeTouchMarker = null;
 let mazeLevel = 0;
 let mazeTimeLeft = MAZE_DURATION;
 let mazeScore = 0;
@@ -728,6 +836,7 @@ function buildMaze() {
       const cell = document.createElement('div');
       cell.className = `maze-cell ${level.grid[r][c] === 1 ? 'path' : 'wall'}`;
       if (r === level.start.row && c === level.start.col) {
+        cell.classList.add('start-point');
         const marker = document.createElement('div');
         marker.className = 'maze-marker';
         marker.innerHTML = SPRING_SVG;
@@ -743,6 +852,10 @@ function buildMaze() {
     }
     mazeCells.push(rowCells);
   }
+  mazeTouchMarker = document.createElement('div');
+  mazeTouchMarker.className = 'maze-touch-marker';
+  mazeTouchMarker.innerHTML = BUNNY_CURSOR_SVG;
+  mazeField.appendChild(mazeTouchMarker);
 }
 
 function openMazeGame() {
@@ -786,8 +899,13 @@ function startMazeGame() {
   }, 1000);
 }
 
-mazeField.addEventListener('pointermove', (e) => {
+function handleMazePointerEvent(e) {
   if (!isMazePlaying) return;
+
+  if (e.pointerType === 'touch') {
+    updateMazeTouchMarker(e.clientX, e.clientY);
+  }
+
   const level = MAZE_LEVELS[mazeLevel];
   const rect = mazeField.getBoundingClientRect();
   const col = Math.floor(((e.clientX - rect.left) / rect.width) * MAZE_COLS);
@@ -811,10 +929,13 @@ mazeField.addEventListener('pointermove', (e) => {
   }
 
   if (isGoal) {
-    mazeScore += mazeLevel + 1; // 레벨이 높을수록 더 많은 점수 (1레벨=1점, 5레벨=5점)
+    const clearedLevel = mazeLevel + 1;
+    const points = mazeLevel + 1; // 레벨이 높을수록 더 많은 점수 (1레벨=1점, 7레벨=7점)
+    mazeScore += points;
     mazeScoreEl.textContent = String(mazeScore);
     GameAudio.playHit();
     spawnMazeGoalEffect();
+    spawnMazeSuccessEffect(clearedLevel, points);
     mazeActive = false;
     mazeLevel = (mazeLevel + 1) % MAZE_LEVELS.length;
     buildMaze();
@@ -827,7 +948,24 @@ mazeField.addEventListener('pointermove', (e) => {
   }
 
   mazeCells[row][col].classList.add('visited');
-});
+}
+
+mazeField.addEventListener('pointerdown', handleMazePointerEvent);
+mazeField.addEventListener('pointermove', handleMazePointerEvent);
+mazeField.addEventListener('pointerup', hideMazeTouchMarker);
+mazeField.addEventListener('pointercancel', hideMazeTouchMarker);
+mazeField.addEventListener('pointerleave', hideMazeTouchMarker);
+
+function updateMazeTouchMarker(clientX, clientY) {
+  const rect = mazeField.getBoundingClientRect();
+  mazeTouchMarker.style.left = `${clientX - rect.left}px`;
+  mazeTouchMarker.style.top = `${clientY - rect.top}px`;
+  mazeTouchMarker.style.display = 'block';
+}
+
+function hideMazeTouchMarker() {
+  mazeTouchMarker.style.display = 'none';
+}
 
 function failMaze() {
   mazeActive = false;
@@ -851,6 +989,17 @@ function spawnMazeGoalEffect() {
   setTimeout(() => burst.remove(), 450);
 }
 
+function spawnMazeSuccessEffect(clearedLevel, points) {
+  mazeField.classList.add('success');
+  setTimeout(() => mazeField.classList.remove('success'), 500);
+
+  const banner = document.createElement('div');
+  banner.className = 'maze-clear-banner';
+  banner.textContent = `🎉 레벨 ${clearedLevel} 클리어! +${points}점`;
+  mazeField.parentElement.insertBefore(banner, mazeField.nextSibling);
+  setTimeout(() => banner.remove(), 1300);
+}
+
 function stopMazeGame() {
   isMazePlaying = false;
   mazeActive = false;
@@ -860,13 +1009,21 @@ function stopMazeGame() {
 function endMazeGame() {
   stopMazeGame();
   GameAudio.playGameOver();
-  unlockStage(4);
   const best = getBestScore(BEST_SCORE_KEY_3);
   const isNewBest = mazeScore > best;
   if (isNewBest) {
     localStorage.setItem(BEST_SCORE_KEY_3, String(mazeScore));
   }
-  showResult(mazeScore, isNewBest ? mazeScore : best);
+
+  const alreadyUnlocked = getUnlockedStage() >= 4;
+  let unlockHint = null;
+  if (mazeScore >= MAZE_UNLOCK_SCORE) {
+    if (!alreadyUnlocked) unlockHint = `🎉 ${MAZE_UNLOCK_SCORE}점 이상 달성! 다음 스테이지가 열렸어요`;
+    unlockStage(4);
+  } else if (!alreadyUnlocked) {
+    unlockHint = `다음 스테이지를 열려면 ${MAZE_UNLOCK_SCORE}점 이상 필요해요 (이번 점수 ${mazeScore}점)`;
+  }
+  showResult(mazeScore, isNewBest ? mazeScore : best, unlockHint);
 }
 
 // ===== 선물 열어보기 =====
@@ -877,18 +1034,24 @@ const boxStartOverlay = document.getElementById('box-start-overlay');
 const boxStartBtn = document.getElementById('box-start-btn');
 const boxQuitBtn = document.getElementById('box-quit-btn');
 
+const collectionTrack = document.getElementById('collection-track');
+
 const BOX_COUNT = 9;
 const BOX_DURATION = 30; // 초
 const BOX_UNTIE_TIMEOUT = 500; // ms, 리본을 푼 뒤 뚜껑을 열어야 하는 제한시간
+const COLLECTION_BONUS = 10; // 5종류를 모두 모았을 때 추가 점수
 
 let boxSlots = [];
 let boxInners = [];
-let boxTargetIndex = -1;
 let boxTimeLeft = BOX_DURATION;
 let boxScore = 0;
 let isBoxPlaying = false;
 let boxCountdownTimer = null;
 let boxClickState = null; // { index, timer } - 리본을 푼 뒤 뚜껑 열기를 기다리는 상태
+let collectedTypes = []; // 현재 모으고 있는 세트에서 발견한 장난감 종류(중복 없이)
+let collectionCompletions = 0; // 5종류를 모두 모아 도감을 완성한 횟수
+let collectionIcons = [];
+let collectionCounterEl = null;
 
 function buildBoxField() {
   boxField.innerHTML = '';
@@ -909,8 +1072,23 @@ function buildBoxField() {
   }
 }
 
+function buildCollectionTrack() {
+  collectionTrack.innerHTML = '';
+  collectionIcons = TOY_SVGS.map((toy) => {
+    const icon = document.createElement('div');
+    icon.className = 'collection-icon';
+    icon.innerHTML = buildToySVG(toy);
+    collectionTrack.appendChild(icon);
+    return icon;
+  });
+  collectionCounterEl = document.createElement('div');
+  collectionCounterEl.className = 'collection-counter';
+  collectionTrack.appendChild(collectionCounterEl);
+}
+
 function openBoxGame() {
   buildBoxField();
+  buildCollectionTrack();
   boxStartOverlay.classList.remove('hidden');
   resetBoxHud();
   showScreen('box');
@@ -919,9 +1097,20 @@ function openBoxGame() {
 function resetBoxHud() {
   boxTimeLeft = BOX_DURATION;
   boxScore = 0;
-  boxTargetIndex = -1;
+  collectedTypes = [];
+  collectionCompletions = 0;
   boxTimeEl.textContent = String(boxTimeLeft);
   boxScoreEl.textContent = String(boxScore);
+  updateCollectionUI();
+}
+
+function updateCollectionUI() {
+  collectionIcons.forEach((icon, idx) => {
+    icon.classList.toggle('collected', collectedTypes.includes(idx));
+  });
+  if (collectionCounterEl) {
+    collectionCounterEl.textContent = `완성 ${collectionCompletions}회`;
+  }
 }
 
 boxStartBtn.addEventListener('click', () => {
@@ -939,7 +1128,6 @@ function startBoxGame() {
   isBoxPlaying = true;
   unlockAudioAndStartBgm();
   GameAudio.playStart();
-  pickNewTarget();
 
   boxCountdownTimer = setInterval(() => {
     boxTimeLeft -= 1;
@@ -950,27 +1138,15 @@ function startBoxGame() {
   }, 1000);
 }
 
-function pickNewTarget() {
-  if (boxClickState) {
-    clearTimeout(boxClickState.timer);
-    boxInners[boxClickState.index].innerHTML = GIFT_BOX_CLOSED_SVG;
-    boxClickState = null;
-  }
-  boxSlots.forEach((slot) => slot.classList.remove('target', 'opened'));
-  let idx;
-  do {
-    idx = Math.floor(Math.random() * BOX_COUNT);
-  } while (idx === boxTargetIndex && BOX_COUNT > 1);
-  boxTargetIndex = idx;
-  boxSlots[idx].classList.add('target');
-}
-
 function onBoxClick(i) {
-  if (!isBoxPlaying || i !== boxTargetIndex) return;
+  if (!isBoxPlaying) return;
 
   if (!boxClickState || boxClickState.index !== i) {
-    // 1단계: 리본을 풀어요
-    if (boxClickState) clearTimeout(boxClickState.timer);
+    // 1단계: 리본을 풀어요 (어떤 상자든 자유롭게 시작 가능)
+    if (boxClickState) {
+      clearTimeout(boxClickState.timer);
+      boxInners[boxClickState.index].innerHTML = GIFT_BOX_CLOSED_SVG;
+    }
     GameAudio.playClick();
     boxInners[i].innerHTML = GIFT_BOX_UNTIED_SVG;
     const timer = setTimeout(() => {
@@ -984,18 +1160,48 @@ function onBoxClick(i) {
   // 2단계(제한시간 내 재클릭): 뚜껑을 열어요
   clearTimeout(boxClickState.timer);
   boxClickState = null;
-  boxInners[i].innerHTML = getGiftBoxOpenSVG();
+
+  const { typeIndex, svg } = getRandomToy();
+  boxInners[i].innerHTML = svg;
   boxScore += 1;
-  boxScoreEl.textContent = String(boxScore);
   GameAudio.playHit();
+
+  if (!collectedTypes.includes(typeIndex)) {
+    collectedTypes.push(typeIndex);
+  }
+  updateCollectionUI();
+
   const slot = boxSlots[i];
   spawnBoxEffect(slot);
-  pickNewTarget(); // 다음 타겟을 먼저 고른 뒤(다른 칸의 target/opened 클래스 정리), 이 칸에만 열림 애니메이션 적용
   slot.classList.add('opened');
   setTimeout(() => {
-    if (boxTargetIndex !== i) boxInners[i].innerHTML = GIFT_BOX_CLOSED_SVG;
+    boxInners[i].innerHTML = GIFT_BOX_CLOSED_SVG;
     slot.classList.remove('opened');
-  }, 550);
+  }, 650);
+
+  if (collectedTypes.length >= TOY_SVGS.length) {
+    boxScore += COLLECTION_BONUS;
+    collectionCompletions += 1;
+    GameAudio.playBonus();
+    collectionTrack.classList.add('completed');
+    announceCollectionBonus();
+    updateCollectionUI();
+    setTimeout(() => {
+      collectedTypes = [];
+      collectionTrack.classList.remove('completed');
+      updateCollectionUI();
+    }, 900);
+  }
+
+  boxScoreEl.textContent = String(boxScore);
+}
+
+function announceCollectionBonus() {
+  const banner = document.createElement('div');
+  banner.className = 'collection-bonus-banner';
+  banner.textContent = `🎉 도감 완성! +${COLLECTION_BONUS}`;
+  collectionTrack.appendChild(banner);
+  setTimeout(() => banner.remove(), 1200);
 }
 
 function spawnBoxEffect(slot) {
@@ -1037,9 +1243,16 @@ function endBoxGame() {
 }
 
 // ===== 결과 화면 =====
-function showResult(finalScore, bestScore) {
+function showResult(finalScore, bestScore, unlockHint) {
   document.getElementById('result-score').textContent = `${finalScore}점`;
   document.getElementById('result-best').textContent = `최고점수 : ${bestScore}점`;
+  const unlockEl = document.getElementById('result-unlock');
+  if (unlockHint) {
+    unlockEl.textContent = unlockHint;
+    unlockEl.classList.remove('hidden');
+  } else {
+    unlockEl.classList.add('hidden');
+  }
   showScreen('result');
 }
 

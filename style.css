@@ -33,6 +33,14 @@ body {
   font-size: 1.2rem;
 }
 
+.total-score {
+  text-align: center;
+  color: #ff9f43;
+  font-family: 'Jua', sans-serif;
+  font-size: 1.3rem;
+  margin: 20px 0 0;
+}
+
 /* ===== 스테이지 맵 ===== */
 .map-card {
   background: #ffffffcc;
@@ -239,6 +247,11 @@ body {
   z-index: 6;
 }
 
+.score-pop.penalty {
+  color: #ff6b6b;
+  text-shadow: -1px -1px 0 #8a1f1f, 1px -1px 0 #8a1f1f, -1px 1px 0 #8a1f1f, 1px 1px 0 #8a1f1f;
+}
+
 /* ===== 도토리 모으기 ===== */
 #screen-drag {
   position: relative;
@@ -403,11 +416,55 @@ body {
   box-shadow: 0 6px 0 #2b2b3d;
   box-sizing: border-box;
   cursor: crosshair;
+  touch-action: none;
   transition: background-color 0.15s ease-out;
+}
+
+.maze-touch-marker {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 20;
+  display: none;
+}
+
+.maze-touch-marker svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .maze-field.fail {
   background: #ff9b9b;
+}
+
+.maze-field.success {
+  background: #b8f5c0;
+}
+
+.maze-clear-banner {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  transform: translate(-50%, -50%);
+  background: #ffd93d;
+  border: 4px solid #2b2b3d;
+  border-radius: 16px;
+  padding: 10px 20px;
+  font-family: 'Jua', sans-serif;
+  font-size: 1.3rem;
+  white-space: nowrap;
+  z-index: 15;
+  animation: mazeClearPop 1.3s ease-out forwards;
+}
+
+@keyframes mazeClearPop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -60%) scale(0.95); }
 }
 
 .maze-cell {
@@ -445,6 +502,15 @@ body {
   display: block;
 }
 
+.start-point .maze-marker {
+  animation: startPulse 1s ease-in-out infinite;
+}
+
+@keyframes startPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(74, 222, 128, 0)); }
+  50% { transform: scale(1.18); filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.9)); }
+}
+
 /* ===== 선물 열어보기 ===== */
 #screen-box {
   position: relative;
@@ -476,26 +542,17 @@ body {
 
 .box-slot .gift-box {
   width: 78%;
-  transition: transform 0.15s ease-out, opacity 0.15s ease-out, filter 0.15s ease-out;
-  opacity: 0.55;
-  filter: grayscale(35%);
+  transition: transform 0.15s ease-out;
+}
+
+.box-slot:hover .gift-box {
+  transform: scale(1.06);
 }
 
 .box-slot .gift-box svg {
   width: 100%;
   height: auto;
   display: block;
-}
-
-.box-slot.target .gift-box {
-  opacity: 1;
-  filter: none;
-  animation: boxPulse 0.7s ease-in-out infinite;
-}
-
-@keyframes boxPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
 }
 
 .box-slot.opened .gift-box {
@@ -525,6 +582,74 @@ body {
   100% { transform: translate(-50%, -50%) scale(0.9) rotate(0deg); opacity: 0; }
 }
 
+.collection-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #ffffffcc;
+  border-radius: 16px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  transition: background-color 0.3s ease-out;
+}
+
+.collection-counter {
+  margin-left: auto;
+  font-family: 'Jua', sans-serif;
+  font-size: 1.1rem;
+  color: #3a5a8c;
+  white-space: nowrap;
+}
+
+.collection-track.completed {
+  background: #fff3b0cc;
+}
+
+.collection-icon {
+  width: 40px;
+  height: 40px;
+  opacity: 0.3;
+  filter: grayscale(100%);
+  transition: opacity 0.2s ease-out, filter 0.2s ease-out, transform 0.2s ease-out;
+}
+
+.collection-icon.collected {
+  opacity: 1;
+  filter: none;
+  transform: scale(1.12);
+}
+
+.collection-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.collection-bonus-banner {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  transform: translate(-50%, -100%);
+  background: #ffd93d;
+  border: 3px solid #2b2b3d;
+  border-radius: 14px;
+  padding: 6px 14px;
+  font-family: 'Jua', sans-serif;
+  font-size: 1rem;
+  white-space: nowrap;
+  animation: bonusBannerPop 1.2s ease-out forwards;
+  z-index: 10;
+}
+
+@keyframes bonusBannerPop {
+  0% { opacity: 0; transform: translate(-50%, -80%) scale(0.7); }
+  20% { opacity: 1; transform: translate(-50%, -100%) scale(1.05); }
+  80% { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -120%) scale(0.95); }
+}
+
 /* ===== 결과 화면 ===== */
 .result-score {
   font-family: 'Jua', sans-serif;
@@ -537,6 +662,16 @@ body {
   color: #5c7999;
   font-size: 1.1rem;
   margin-bottom: 10px;
+}
+
+.result-unlock {
+  font-family: 'Gaegu', sans-serif;
+  font-size: 1.05rem;
+  color: #3a8f5c;
+  background: #e5f7ea;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 0 0 10px;
 }
 
 @media (max-width: 480px) {
