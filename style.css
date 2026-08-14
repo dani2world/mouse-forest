@@ -145,6 +145,24 @@ body {
   font-size: 1.1rem;
 }
 
+.hud-item.urgent {
+  color: #ff4d4d;
+}
+
+.hud-item.urgent .time-num {
+  display: inline-block;
+  animation: urgentPulse 0.5s ease-in-out infinite;
+}
+
+.hud-item.urgent .time-unit {
+  display: none;
+}
+
+@keyframes urgentPulse {
+  0%, 100% { transform: scale(2.8); }
+  50% { transform: scale(3.2); }
+}
+
 .quit-btn {
   background: #ff8080;
   border: none;

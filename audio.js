@@ -92,6 +92,9 @@ window.GameAudio = (function () {
       tone(880, 0.1, 0.1, 'triangle', 0.2);
       tone(1046.5, 0.2, 0.2, 'triangle', 0.22);
     },
+    playTick: function () {
+      tone(1046.5, 0, 0.08, 'square', 0.14);
+    },
     playStart: function () {
       tone(523.25, 0, 0.1, 'triangle', 0.2);
       tone(783.99, 0.1, 0.16, 'triangle', 0.2);

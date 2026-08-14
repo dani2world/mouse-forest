@@ -22,13 +22,19 @@ const ACORN_SVG = `
   <line x1="25" y1="30" x2="75" y2="30" stroke="#2b2b3d" stroke-width="3" stroke-linecap="round"/>
 </svg>`;
 
-const PINECONE_SVG = `
+function buildChestnutSpikes(cx, cy, count, color) {
+  let spikes = '';
+  for (let i = 0; i < count; i++) {
+    const angle = (360 / count) * i;
+    spikes += `<polygon points="50,6 43,26 57,26" fill="${color}" stroke="#2b2b3d" stroke-width="3.5" stroke-linejoin="round" transform="rotate(${angle} ${cx} ${cy})"/>`;
+  }
+  return spikes;
+}
+
+const CHESTNUT_SVG = `
 <svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg">
-  <path d="M50 8 C32 8 22 26 22 52 C22 78 34 102 50 102 C66 102 78 78 78 52 C78 26 68 8 50 8 Z" fill="#8a5a34" stroke="#2b2b3d" stroke-width="6" stroke-linejoin="round"/>
-  <path d="M28 28 Q50 36 72 28" fill="none" stroke="#2b2b3d" stroke-width="3" stroke-linecap="round"/>
-  <path d="M25 46 Q50 56 75 46" fill="none" stroke="#2b2b3d" stroke-width="3" stroke-linecap="round"/>
-  <path d="M25 64 Q50 74 75 64" fill="none" stroke="#2b2b3d" stroke-width="3" stroke-linecap="round"/>
-  <path d="M29 82 Q50 90 71 82" fill="none" stroke="#2b2b3d" stroke-width="3" stroke-linecap="round"/>
+  ${buildChestnutSpikes(50, 58, 14, '#8a9b4a')}
+  <circle cx="50" cy="58" r="30" fill="#8a9b4a" stroke="#2b2b3d" stroke-width="6"/>
 </svg>`;
 
 const BASKET_SVG = `
@@ -279,6 +285,19 @@ muteBtn.addEventListener('click', () => {
   applyMuteState(!GameAudio.isMuted());
 });
 
+const URGENT_TIME_THRESHOLD = 5; // 초, 이 이하로 남으면 카운트다운 강조
+
+function applyUrgentTimer(timeEl, timeLeft) {
+  const hudItem = timeEl.closest('.hud-item');
+  if (!hudItem) return;
+  if (timeLeft <= URGENT_TIME_THRESHOLD && timeLeft > 0) {
+    hudItem.classList.add('urgent');
+    GameAudio.playTick();
+  } else {
+    hudItem.classList.remove('urgent');
+  }
+}
+
 // ===== 스테이지 맵 =====
 document.getElementById('stage-grid').addEventListener('click', (e) => {
   const tile = e.target.closest('.stage-tile');
@@ -345,6 +364,7 @@ function resetHud() {
   score = 0;
   moleTimeEl.textContent = String(timeLeft);
   moleScoreEl.textContent = String(score);
+  applyUrgentTimer(moleTimeEl, timeLeft);
 }
 
 moleStartBtn.addEventListener('click', () => {
@@ -367,6 +387,7 @@ function startMoleGame() {
   countdownTimer = setInterval(() => {
     timeLeft -= 1;
     moleTimeEl.textContent = String(timeLeft);
+    applyUrgentTimer(moleTimeEl, timeLeft);
     if (timeLeft <= 0) {
       endMoleGame();
     }
@@ -478,7 +499,7 @@ const FALL_SPEED_END = 150; // px/초, 게임 막판 낙하 속도(빠름)
 const SPAWN_GAP_START = 1300; // ms, 게임 시작 시 등장 간격(뜸함)
 const SPAWN_GAP_END = 550; // ms, 게임 막판 등장 간격(자주, 여러 개가 동시에 떨어짐)
 const MAX_FALLING_ITEMS = 4; // 동시에 떨어질 수 있는 최대 개수
-const PINECONE_CHANCE = 0.22; // 솔방울이 섞여 나올 확률
+const CHESTNUT_CHANCE = 0.22; // 밤송이가 섞여 나올 확률
 const FILL_MAX_SCORE = 36; // 이 점수에 도달하면 바구니가 가득 참
 
 let dragTimeLeft = DRAG_GAME_DURATION;
@@ -486,7 +507,7 @@ let dragScore = 0;
 let isDragPlaying = false;
 let dragSpawnTimer = null;
 let dragCountdownTimer = null;
-let fallingItems = []; // 현재 떨어지고 있는 도토리/솔방울 엘리먼트 목록
+let fallingItems = []; // 현재 떨어지고 있는 도토리/밤송이 엘리먼트 목록
 let dragState = null;
 
 document.getElementById('basket-svg').innerHTML = BASKET_SVG;
@@ -510,6 +531,7 @@ function resetDragHud() {
   updateBasketFill();
   dragTimeEl.textContent = String(dragTimeLeft);
   dragScoreEl.textContent = String(dragScore);
+  applyUrgentTimer(dragTimeEl, dragTimeLeft);
 }
 
 dragStartBtn.addEventListener('click', () => {
@@ -532,6 +554,7 @@ function startDragGame() {
   dragCountdownTimer = setInterval(() => {
     dragTimeLeft -= 1;
     dragTimeEl.textContent = String(dragTimeLeft);
+    applyUrgentTimer(dragTimeEl, dragTimeLeft);
     if (dragTimeLeft <= 0) {
       endDragGame();
     }
@@ -549,11 +572,11 @@ function scheduleNextAcornSpawn() {
 }
 
 function spawnFallingItem() {
-  const isPinecone = Math.random() < PINECONE_CHANCE;
+  const isChestnut = Math.random() < CHESTNUT_CHANCE;
   const item = document.createElement('div');
   item.className = 'acorn';
-  item.dataset.itemType = isPinecone ? 'pinecone' : 'acorn';
-  item.innerHTML = isPinecone ? PINECONE_SVG : ACORN_SVG;
+  item.dataset.itemType = isChestnut ? 'chestnut' : 'acorn';
+  item.innerHTML = isChestnut ? CHESTNUT_SVG : ACORN_SVG;
 
   const fieldW = dragField.clientWidth;
   const maxX = Math.max(0, fieldW - ACORN_SIZE);
@@ -647,8 +670,8 @@ function onAcornPointerUp(e) {
   const overlaps = cx > basketRect.left && cx < basketRect.right && cy > basketRect.top && cy < basketRect.bottom;
 
   if (overlaps && isDragPlaying) {
-    const isPinecone = item.dataset.itemType === 'pinecone';
-    if (isPinecone) {
+    const isChestnut = item.dataset.itemType === 'chestnut';
+    if (isChestnut) {
       dragScore = Math.max(0, dragScore - 1);
       GameAudio.playMiss();
       spawnDropEffect(true);
@@ -872,6 +895,7 @@ function resetMazeHud() {
   mazeActive = false;
   mazeTimeEl.textContent = String(mazeTimeLeft);
   mazeScoreEl.textContent = String(mazeScore);
+  applyUrgentTimer(mazeTimeEl, mazeTimeLeft);
 }
 
 mazeStartBtn.addEventListener('click', () => {
@@ -893,6 +917,7 @@ function startMazeGame() {
   mazeCountdownTimer = setInterval(() => {
     mazeTimeLeft -= 1;
     mazeTimeEl.textContent = String(mazeTimeLeft);
+    applyUrgentTimer(mazeTimeEl, mazeTimeLeft);
     if (mazeTimeLeft <= 0) {
       endMazeGame();
     }
@@ -1101,6 +1126,7 @@ function resetBoxHud() {
   collectionCompletions = 0;
   boxTimeEl.textContent = String(boxTimeLeft);
   boxScoreEl.textContent = String(boxScore);
+  applyUrgentTimer(boxTimeEl, boxTimeLeft);
   updateCollectionUI();
 }
 
@@ -1132,6 +1158,7 @@ function startBoxGame() {
   boxCountdownTimer = setInterval(() => {
     boxTimeLeft -= 1;
     boxTimeEl.textContent = String(boxTimeLeft);
+    applyUrgentTimer(boxTimeEl, boxTimeLeft);
     if (boxTimeLeft <= 0) {
       endBoxGame();
     }
@@ -1182,16 +1209,16 @@ function onBoxClick(i) {
   if (collectedTypes.length >= TOY_SVGS.length) {
     boxScore += COLLECTION_BONUS;
     collectionCompletions += 1;
+    collectedTypes = []; // 즉시 초기화(늦게 초기화하면 그 사이 다른 상자를 열 때 보너스가 중복 발생함)
     GameAudio.playBonus();
     collectionTrack.classList.add('completed');
     announceCollectionBonus();
-    updateCollectionUI();
     setTimeout(() => {
-      collectedTypes = [];
       collectionTrack.classList.remove('completed');
-      updateCollectionUI();
     }, 900);
   }
+
+  updateCollectionUI();
 
   boxScoreEl.textContent = String(boxScore);
 }
