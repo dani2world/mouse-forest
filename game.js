@@ -1029,6 +1029,7 @@ let mazeTimeLeft = MAZE_DURATION;
 let mazeScore = 0;
 let isMazePlaying = false;
 let mazeActive = false; // 시작점에서 출발해 진행 중인지 여부
+let lastMazeCell = null; // 마지막으로 지나간 칸 (연속 이동인지 검사용)
 let mazeCountdownTimer = null;
 
 const bunnyCursor = `url('data:image/svg+xml,${encodeURIComponent(BUNNY_CURSOR_SVG)}') 16 27, auto`;
@@ -1078,6 +1079,7 @@ function resetMazeHud() {
   mazeScore = 0;
   mazeLevel = 0;
   mazeActive = false;
+  lastMazeCell = null;
   mazeTimeEl.textContent = String(mazeTimeLeft);
   mazeScoreEl.textContent = String(mazeScore);
   applyUrgentTimer(mazeTimeEl, mazeTimeLeft);
@@ -1133,8 +1135,17 @@ function handleMazePointerEvent(e) {
   if (!mazeActive) {
     if (isStart) {
       mazeActive = true;
+      lastMazeCell = { row, col };
       mazeCells[row][col].classList.add('visited');
     }
+    return;
+  }
+
+  // 직전에 지나간 칸과 붙어있지 않은 칸으로 건너뛰었다면(예: 이어서 드래그하지 않고
+  // 시작점과 도착점 근처를 따로따로 클릭) 실제로 길을 통과한 게 아니므로 실패 처리
+  const jumpDistance = Math.max(Math.abs(row - lastMazeCell.row), Math.abs(col - lastMazeCell.col));
+  if (jumpDistance > 1) {
+    failMaze();
     return;
   }
 
@@ -1147,6 +1158,7 @@ function handleMazePointerEvent(e) {
     spawnMazeGoalEffect();
     spawnMazeSuccessEffect(clearedLevel, points);
     mazeActive = false;
+    lastMazeCell = null;
     mazeLevel = (mazeLevel + 1) % MAZE_LEVELS.length;
     buildMaze();
     return;
@@ -1157,6 +1169,7 @@ function handleMazePointerEvent(e) {
     return;
   }
 
+  lastMazeCell = { row, col };
   mazeCells[row][col].classList.add('visited');
 }
 
@@ -1179,6 +1192,7 @@ function hideMazeTouchMarker() {
 
 function failMaze() {
   mazeActive = false;
+  lastMazeCell = null;
   GameAudio.playMiss();
   mazeField.classList.add('fail');
   clearMazeTrail();
