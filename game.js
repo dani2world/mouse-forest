@@ -175,6 +175,7 @@ const MOTHER_RABBIT_SVG = `
 </svg>`;
 
 const MUTE_KEY = 'mouseAdventure_muted';
+const SESSION_KEY = 'mouseAdventure_session';
 const UNLOCK_KEY = 'mouseAdventure_unlockedStage';
 const BEST_SCORE_KEY_1 = 'mouseAdventure_best_1';
 const BEST_SCORE_KEY_2 = 'mouseAdventure_best_2';
@@ -258,6 +259,176 @@ function renderMap() {
     + getBestScore(BEST_SCORE_KEY_3) + getBestScore(BEST_SCORE_KEY_4);
   document.getElementById('total-score').textContent = `총점 : ${totalScore}점`;
 }
+
+// ===== 로그인 / 순위표 =====
+let loggedIn = false;
+let currentNickname = null;
+let currentPin = null;
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (obj && obj.nickname && obj.pin) return obj;
+  } catch (e) {}
+  return null;
+}
+
+function saveSession(nickname, pin) {
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify({ nickname, pin })); } catch (e) {}
+}
+
+function clearSession() {
+  try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
+}
+
+function loginErrorMessage(code) {
+  switch (code) {
+    case 'wrong_pin': return 'PIN이 올바르지 않아요.';
+    case 'missing_fields': return '닉네임과 PIN을 모두 입력해주세요.';
+    case 'nickname_too_long': return '닉네임은 10자 이내로 입력해주세요.';
+    case 'backend_not_configured': return '아직 서버 연결 전이에요. 잠시만 기다려주세요.';
+    default: return '로그인에 실패했어요. 잠시 후 다시 시도해주세요.';
+  }
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function hideLoginError() {
+  document.getElementById('login-error').classList.add('hidden');
+}
+
+function openLoginScreen() {
+  hideLoginError();
+  document.getElementById('nickname-input').value = '';
+  document.getElementById('pin-input').value = '';
+  document.getElementById('screen-login').classList.remove('hidden');
+}
+
+function closeLoginScreen() {
+  document.getElementById('screen-login').classList.add('hidden');
+}
+
+function updateLoginStatusDisplay() {
+  const statusEl = document.getElementById('login-status');
+  const loginLinkBtn = document.getElementById('login-link-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  if (loggedIn) {
+    statusEl.textContent = `👤 ${currentNickname}님으로 플레이 중`;
+    statusEl.classList.remove('hidden');
+    loginLinkBtn.classList.add('hidden');
+    logoutBtn.classList.remove('hidden');
+  } else {
+    statusEl.textContent = '';
+    statusEl.classList.add('hidden');
+    loginLinkBtn.classList.remove('hidden');
+    logoutBtn.classList.add('hidden');
+  }
+}
+
+function resolveLogin(nickname, pin) {
+  loggedIn = true;
+  currentNickname = nickname;
+  currentPin = pin;
+  updateLoginStatusDisplay();
+  closeLoginScreen();
+  submitTotalScoreIfLoggedIn();
+}
+
+function submitTotalScoreIfLoggedIn() {
+  if (!loggedIn) return;
+  const total = getBestScore(BEST_SCORE_KEY_1) + getBestScore(BEST_SCORE_KEY_2)
+    + getBestScore(BEST_SCORE_KEY_3) + getBestScore(BEST_SCORE_KEY_4);
+  window.Backend.submitScore(currentNickname, currentPin, total);
+}
+
+function openLeaderboard() {
+  const listEl = document.getElementById('leaderboard-list');
+  listEl.innerHTML = '<li class="leaderboard-empty">불러오는 중...</li>';
+  document.getElementById('screen-leaderboard').classList.remove('hidden');
+  window.Backend.getLeaderboard().then((res) => {
+    if (!res.ok) {
+      listEl.innerHTML = res.error === 'backend_not_configured'
+        ? '<li class="leaderboard-empty">순위표 서버 연결 전이에요.</li>'
+        : '<li class="leaderboard-empty">순위표를 불러올 수 없어요.</li>';
+      return;
+    }
+    if (!res.leaderboard || res.leaderboard.length === 0) {
+      listEl.innerHTML = '<li class="leaderboard-empty">아직 기록이 없어요.</li>';
+      return;
+    }
+    const medals = ['🥇', '🥈', '🥉'];
+    listEl.innerHTML = res.leaderboard.map((row, i) => {
+      const rankLabel = medals[i] || `${i + 1}.`;
+      return `<li><span><span class="leaderboard-rank">${rankLabel}</span>${escapeHtml(row.nickname)}</span><span>${row.score}점</span></li>`;
+    }).join('');
+  });
+}
+
+function attemptSessionRestore() {
+  const session = loadSession();
+  if (!session) return;
+  window.Backend.login(session.nickname, session.pin).then((res) => {
+    if (res.ok) {
+      resolveLogin(session.nickname, session.pin);
+    } else {
+      clearSession();
+    }
+  });
+}
+
+document.getElementById('login-link-btn').addEventListener('click', () => {
+  openLoginScreen();
+});
+
+document.getElementById('login-close-btn').addEventListener('click', () => {
+  closeLoginScreen();
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+  clearSession();
+  loggedIn = false;
+  currentNickname = null;
+  currentPin = null;
+  updateLoginStatusDisplay();
+});
+
+document.getElementById('login-btn').addEventListener('click', () => {
+  const nickname = document.getElementById('nickname-input').value.trim();
+  const pin = document.getElementById('pin-input').value.trim();
+  hideLoginError();
+  if (!nickname || !pin) { showLoginError('닉네임과 PIN을 모두 입력해주세요.'); return; }
+  window.Backend.login(nickname, pin).then((res) => {
+    if (res.ok) {
+      saveSession(nickname, pin);
+      resolveLogin(nickname, pin);
+    } else {
+      showLoginError(loginErrorMessage(res.error));
+    }
+  });
+});
+
+document.getElementById('leaderboard-btn').addEventListener('click', () => {
+  openLeaderboard();
+});
+
+document.getElementById('leaderboard-close-btn').addEventListener('click', () => {
+  document.getElementById('screen-leaderboard').classList.add('hidden');
+});
 
 // ===== 오디오 =====
 const muteBtn = document.getElementById('mute-btn');
@@ -469,6 +640,7 @@ function endMoleGame() {
   const isNewBest = score > best;
   if (isNewBest) {
     localStorage.setItem(BEST_SCORE_KEY_1, String(score));
+    submitTotalScoreIfLoggedIn();
   }
 
   const alreadyUnlocked = getUnlockedStage() >= 2;
@@ -724,6 +896,7 @@ function endDragGame() {
   const isNewBest = dragScore > best;
   if (isNewBest) {
     localStorage.setItem(BEST_SCORE_KEY_2, String(dragScore));
+    submitTotalScoreIfLoggedIn();
   }
 
   const alreadyUnlocked = getUnlockedStage() >= 3;
@@ -1038,6 +1211,7 @@ function endMazeGame() {
   const isNewBest = mazeScore > best;
   if (isNewBest) {
     localStorage.setItem(BEST_SCORE_KEY_3, String(mazeScore));
+    submitTotalScoreIfLoggedIn();
   }
 
   const alreadyUnlocked = getUnlockedStage() >= 4;
@@ -1265,6 +1439,7 @@ function endBoxGame() {
   const isNewBest = boxScore > best;
   if (isNewBest) {
     localStorage.setItem(BEST_SCORE_KEY_4, String(boxScore));
+    submitTotalScoreIfLoggedIn();
   }
   showResult(boxScore, isNewBest ? boxScore : best);
 }
@@ -1312,3 +1487,5 @@ document.getElementById('back-map-btn').addEventListener('click', () => {
 document.getElementById('stage-icon-1').innerHTML = MOLE_FACE_SVG;
 renderMap();
 showScreen('map');
+updateLoginStatusDisplay();
+attemptSessionRestore();

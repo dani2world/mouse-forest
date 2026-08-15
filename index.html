@@ -40,6 +40,36 @@
         </button>
       </div>
       <p class="total-score" id="total-score">총점 : 0점</p>
+      <p class="login-status hidden" id="login-status"></p>
+      <div class="login-row">
+        <button id="leaderboard-btn" class="link-btn">🏆 순위표 보기</button>
+        <button id="login-link-btn" class="link-btn">로그인</button>
+        <button id="logout-btn" class="link-btn hidden">로그아웃</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 로그인 화면 ============ -->
+  <section id="screen-login" class="screen overlay hidden">
+    <div class="popup-card">
+      <h2>👤 로그인</h2>
+      <p class="popup-desc">닉네임과 PIN을 입력하세요. 처음 쓰는 닉네임이면 바로 새 계정이 만들어져요.</p>
+      <div class="option-label">닉네임</div>
+      <input id="nickname-input" type="text" class="text-input" maxlength="10" placeholder="닉네임 입력" autocomplete="off">
+      <div class="option-label">PIN (숫자 4자리)</div>
+      <input id="pin-input" type="password" inputmode="numeric" pattern="[0-9]*" class="text-input" maxlength="4" placeholder="••••" autocomplete="off">
+      <div id="login-error" class="login-error hidden"></div>
+      <button id="login-btn" class="start-btn">▶ 로그인</button>
+      <button id="login-close-btn" class="link-btn">닫기</button>
+    </div>
+  </section>
+
+  <!-- ============ 순위표 화면 ============ -->
+  <section id="screen-leaderboard" class="screen overlay hidden">
+    <div class="popup-card">
+      <h2>🏆 순위표 TOP 10</h2>
+      <ol id="leaderboard-list" class="leaderboard-list"></ol>
+      <button id="leaderboard-close-btn" class="start-btn">닫기</button>
     </div>
   </section>
 
@@ -133,6 +163,7 @@
 
 </div>
 <script src="audio.js"></script>
+<script src="backend.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
