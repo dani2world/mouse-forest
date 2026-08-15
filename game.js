@@ -356,6 +356,18 @@ function submitTotalScoreIfLoggedIn() {
   window.Backend.submitScore(currentNickname, currentPin, total);
 }
 
+function loadNotice() {
+  const board = document.getElementById('notice-board');
+  window.Backend.getNotice().then((res) => {
+    if (res.ok && res.notice) {
+      board.textContent = `📢 ${res.notice}`;
+      board.classList.remove('hidden');
+    } else {
+      board.classList.add('hidden');
+    }
+  });
+}
+
 function openLeaderboard() {
   const listEl = document.getElementById('leaderboard-list');
   listEl.innerHTML = '<li class="leaderboard-empty">불러오는 중...</li>';
@@ -1489,3 +1501,4 @@ renderMap();
 showScreen('map');
 updateLoginStatusDisplay();
 attemptSessionRestore();
+loadNotice();

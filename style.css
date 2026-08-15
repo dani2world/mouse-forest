@@ -59,6 +59,14 @@ body {
   margin: 0;
 }
 
+.notice-board {
+  font-size: 0.85rem;
+  color: #8a6a2c;
+  margin: 14px 0 0;
+  text-align: center;
+  white-space: pre-line;
+}
+
 /* ===== 스테이지 맵 ===== */
 .map-card {
   background: #ffffffcc;

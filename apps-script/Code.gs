@@ -5,12 +5,14 @@
  * 시트 구성 (탭 이름 정확히 일치해야 함):
  *   - "Users"  : A열=닉네임, B열=PIN해시   (1행은 헤더, 2행부터 데이터)
  *   - "Scores" : A열=닉네임, B열=총점, C열=갱신시각
+ *   - "Config" : B1 셀에 공지사항 텍스트 (비워두면 공지 없음)
  *
  * 닉네임이 처음 등장하면 자동으로 계정이 생성됩니다(관리자 승인 불필요).
  */
 
 var USERS_SHEET = 'Users';
 var SCORES_SHEET = 'Scores';
+var CONFIG_SHEET = 'Config';
 
 function doPost(e) {
   var result;
@@ -23,6 +25,8 @@ function doPost(e) {
       result = handleSubmitScore(body.nickname, body.pin, body.score);
     } else if (action === 'getLeaderboard') {
       result = handleGetLeaderboard();
+    } else if (action === 'getNotice') {
+      result = handleGetNotice();
     } else {
       result = { ok: false, error: 'unknown_action' };
     }
@@ -114,4 +118,10 @@ function handleGetLeaderboard() {
     return { nickname: r[0], score: Number(r[1]) };
   });
   return { ok: true, leaderboard: top };
+}
+
+function handleGetNotice() {
+  var sheet = getSheet_(CONFIG_SHEET);
+  var notice = sheet.getRange('B1').getValue();
+  return { ok: true, notice: String(notice || '') };
 }
